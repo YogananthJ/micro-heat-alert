@@ -4,6 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --font-display: "Bebas Neue", "Arial Narrow", sans-serif;
+  --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
+  --color-heat: var(--heat);
+  --color-cool: var(--cool);
+  --shadow-elev: 0 20px 45px -20px oklch(0 0 0 / 0.75);
+}
+
+
 /*
  * Design system definition.
  *
