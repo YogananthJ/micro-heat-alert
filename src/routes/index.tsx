@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { getHeatmapData, heatColor, type HeatCell } from "@/lib/heatmap";
+import RecommendationPanel from "@/components/RecommendationPanel";
+import type { Activity, RecommendInput } from "@/lib/recommend-prompt";
 
 const HeatLeafletMap = lazy(() => import("@/components/HeatLeafletMap"));
 
@@ -41,6 +43,35 @@ function Index() {
     const coolest = frame.cells.find((c) => c.temp_f === min)!;
     return { min, max, hottest, coolest, delta: max - min };
   }, [frame]);
+
+  const buildInput = (activity: Activity): RecommendInput => {
+    const sorted = [...frame.cells].sort((a, b) => b.temp_f - a.temp_f);
+    const slim = (c: HeatCell) => ({
+      id: c.id,
+      lat: Number(c.lat.toFixed(4)),
+      lng: Number(c.lng.toFixed(4)),
+      temp_f: c.temp_f,
+      surface_type: c.surface_type,
+      shade_index: c.shade_index,
+      vegetation_index: c.vegetation_index,
+    });
+    return {
+      activity,
+      city: data.city,
+      current_time_label: frame.label,
+      forecast: data.frames.map((f) => {
+        const t = f.cells.map((c) => c.temp_f);
+        return {
+          label: f.label,
+          min_f: Math.min(...t),
+          avg_f: Math.round((t.reduce((a, b) => a + b, 0) / t.length) * 10) / 10,
+          max_f: Math.max(...t),
+        };
+      }),
+      hottest_zones: sorted.slice(0, 6).map(slim),
+      coolest_zones: sorted.slice(-6).map(slim),
+    };
+  };
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -152,10 +183,7 @@ function Index() {
             )}
           </div>
 
-          <div className="rounded-xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-            AI recommendation panel lands on Day 3 — activity input, risk summary, safer window and
-            zones to avoid.
-          </div>
+          <RecommendationPanel buildInput={buildInput} />
         </aside>
       </div>
     </main>
