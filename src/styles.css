@@ -5,9 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-display: "JetBrains Mono", ui-monospace, monospace;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --color-cool: var(--cool);
   --color-caution: var(--caution);
   --color-danger: var(--danger);
@@ -67,19 +67,19 @@
 }
 
 :root {
-  --radius: 0.375rem;
+  --radius: 0.875rem;
 
-  /* thermal tokens */
-  --void: #0a0d13;
-  --surface: #131822;
-  --surface-raised: #1b2230;
-  --line: #2a3242;
-  --text: #edeff3;
-  --text-muted: #8a93a6;
-  --cool: #3ed8c9;
-  --caution: #f0a83c;
-  --danger: #e8452f;
-  --critical: #ff2d6b;
+  /* Ocean Deep tokens */
+  --void: #08192e;
+  --surface: #0c2340;
+  --surface-raised: #123a5c;
+  --line: #1e4a70;
+  --text: #e8f1f8;
+  --text-muted: #8fb0c9;
+  --cool: #2d8a9e;
+  --caution: #f5b544;
+  --danger: #ff6b35;
+  --critical: #ff3b5c;
   --thermal-gradient: linear-gradient(
     90deg,
     var(--cool) 0%,
@@ -96,15 +96,15 @@
   --popover: var(--surface-raised);
   --popover-foreground: var(--text);
   --primary: var(--caution);
-  --primary-foreground: #0a0d13;
+  --primary-foreground: #08192e;
   --secondary: var(--surface-raised);
   --secondary-foreground: var(--text);
   --muted: var(--surface-raised);
   --muted-foreground: var(--text-muted);
   --accent: var(--cool);
-  --accent-foreground: #0a0d13;
+  --accent-foreground: #08192e;
   --destructive: var(--critical);
-  --destructive-foreground: #0a0d13;
+  --destructive-foreground: #08192e;
   --border: var(--line);
   --input: var(--line);
   --ring: var(--cool);

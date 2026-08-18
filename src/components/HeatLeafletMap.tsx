@@ -55,7 +55,7 @@ export default function HeatLeafletMap({ frame, onSelect, selectedId }: Props) {
           [cell.lat + h, cell.lng + h],
         ],
         {
-          color: isSelected ? "#EDEFF3" : t > 0.92 ? "#FF2D6B" : "transparent",
+          color: isSelected ? "#E8F1F8" : t > 0.92 ? "#FF6B35" : "transparent",
           weight: isSelected ? 2 : t > 0.92 ? 1 : 0,
           fillColor: heatColor(cell.temp_f, min, max),
           fillOpacity: 0.05,
@@ -82,12 +82,12 @@ export default function HeatLeafletMap({ frame, onSelect, selectedId }: Props) {
   return (
     <>
       <style>{`
-        .hs-tip{background:#131822;border:1px solid #2A3242;color:#EDEFF3;font-size:11px;border-radius:4px;box-shadow:none}
-        .hs-tip::before{border-top-color:#2A3242!important}
-        .hs-hot-cell{filter:drop-shadow(0 0 6px rgba(255,45,107,.75))}
-        .leaflet-container{background:#0A0D13;font-family:'Work Sans',sans-serif}
-        .leaflet-bar a{background:#131822;color:#8A93A6;border-color:#2A3242}
-        .leaflet-bar a:hover{background:#1B2230;color:#EDEFF3}
+        .hs-tip{background:#0C2340;border:1px solid #1E4A70;color:#E8F1F8;font-size:11px;border-radius:8px;box-shadow:none}
+        .hs-tip::before{border-top-color:#1E4A70!important}
+        .hs-hot-cell{filter:drop-shadow(0 0 6px rgba(255,107,53,.8))}
+        .leaflet-container{background:#08192E;font-family:'Manrope',sans-serif}
+        .leaflet-bar a{background:#0C2340;color:#8FB0C9;border-color:#1E4A70}
+        .leaflet-bar a:hover{background:#123A5C;color:#E8F1F8}
       `}</style>
       <div ref={containerRef} className="h-full w-full" />
     </>
