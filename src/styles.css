@@ -5,9 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-display: "JetBrains Mono", ui-monospace, monospace;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --color-cool: var(--cool);
   --color-caution: var(--caution);
   --color-danger: var(--danger);
