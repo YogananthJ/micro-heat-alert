@@ -128,15 +128,15 @@ export async function getHeatmapData(startHour = new Date().getHours()): Promise
   };
 }
 
-/** thermal "ironbow" ramp: cool teal -> amber -> vermilion -> magenta */
+/** ocean-deep ramp: deep blue -> teal -> gold -> coral -> red */
 export function heatColor(temp: number, min: number, max: number) {
   const t = max === min ? 0.5 : (temp - min) / (max - min);
   const stops = [
-    [62, 216, 201],
-    [120, 200, 150],
-    [240, 168, 60],
-    [232, 69, 47],
-    [255, 45, 107],
+    [26, 74, 110],
+    [45, 138, 158],
+    [245, 181, 68],
+    [255, 107, 53],
+    [255, 59, 92],
   ];
   const p = t * (stops.length - 1);
   const i = Math.min(stops.length - 2, Math.floor(p));
