@@ -41,7 +41,8 @@ function Index() {
     const max = Math.max(...temps);
     const hottest = frame.cells.find((c) => c.temp_f === max)!;
     const coolest = frame.cells.find((c) => c.temp_f === min)!;
-    return { min, max, hottest, coolest, delta: max - min };
+    const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
+    return { min, max, avg, hottest, coolest, delta: max - min };
   }, [frame]);
 
   const buildInput = (activity: Activity): RecommendInput => {
@@ -74,127 +75,180 @@ function Index() {
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border/60 px-6 py-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-display text-3xl tracking-tight">
-              HeatSafe<span className="text-primary"> AI</span>
+    <main className="min-h-screen bg-background text-foreground lg:grid lg:h-screen lg:grid-cols-[1fr_minmax(360px,34vw)] lg:overflow-hidden">
+      {/* ── LEFT: sticky full-height map ─────────────────────── */}
+      <section className="hs-scan relative h-[62vh] border-b border-border lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
+        <ClientOnly
+          fallback={
+            <div className="grid h-full place-items-center font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">
+              Initializing grid…
+            </div>
+          }
+        >
+          <Suspense
+            fallback={
+              <div className="grid h-full place-items-center font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                Initializing grid…
+              </div>
+            }
+          >
+            <HeatLeafletMap frame={frame} onSelect={setSelected} selectedId={selected?.id} />
+          </Suspense>
+        </ClientOnly>
+
+        {/* floating header over the map */}
+        <div className="pointer-events-none absolute left-0 top-0 z-[500] flex w-full items-start justify-between gap-3 p-5">
+          <div className="hs-rise">
+            <h1 className="font-display text-2xl font-bold tracking-tight">
+              HEATSAFE<span className="text-caution">.AI</span>
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Hyperlocal heat risk · {data.city} · ~2m above ground
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+              {data.city} · 2M AGL
             </p>
           </div>
-          <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium uppercase tracking-widest text-primary">
-            {data.source} data · FortyGuard shape
+          <span
+            className="hs-rise border border-cool/40 bg-background/80 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-cool backdrop-blur"
+            style={{ animationDelay: "120ms" }}
+          >
+            <span className="hs-blink">●</span> {data.source} feed
           </span>
         </div>
-      </header>
 
-      <div className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="space-y-4">
-          <div className="relative h-[520px] overflow-hidden rounded-xl border border-border/60 shadow-elev">
-            <ClientOnly fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Loading map…</div>}>
-              <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Loading map…</div>}>
-                <HeatLeafletMap frame={frame} onSelect={setSelected} selectedId={selected?.id} />
-              </Suspense>
-            </ClientOnly>
-          </div>
-
-          <div className="rounded-xl border border-border/60 bg-card p-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Forecast hour</span>
-              <span className="font-display text-xl">{frame.label}</span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={data.frames.length - 1}
-              value={idx}
-              onChange={(e) => setIdx(Number(e.target.value))}
-              className="mt-3 w-full accent-primary"
-              aria-label="Forecast hour"
-            />
-            <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
-              {data.frames.map((f) => (
-                <span key={f.timestamp}>{f.label}</span>
-              ))}
+        {/* thermal legend bar, floating bottom */}
+        <div className="pointer-events-none absolute bottom-0 left-0 z-[500] w-full p-5">
+          <div className="hs-rise border border-border bg-background/85 p-3 backdrop-blur" style={{ animationDelay: "200ms" }}>
+            <div className="flex items-center gap-3 font-mono text-[10px] text-muted-foreground">
+              <span>{stats.min.toFixed(1)}°F</span>
+              <div
+                className="h-1.5 flex-1"
+                style={{
+                  background: `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1]
+                    .map((t) => heatColor(stats.min + t * (stats.max - stats.min), stats.min, stats.max))
+                    .join(",")})`,
+                }}
+              />
+              <span className="text-critical">{stats.max.toFixed(1)}°F</span>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card p-4 text-xs text-muted-foreground">
-            <span>{stats.min.toFixed(1)}°F</span>
-            <div
-              className="h-2 flex-1 rounded-full"
-              style={{
-                background: `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1]
-                  .map((t) => heatColor(stats.min + t * (stats.max - stats.min), stats.min, stats.max))
-                  .join(",")})`,
-              }}
-            />
-            <span>{stats.max.toFixed(1)}°F</span>
-          </div>
-        </section>
+      {/* ── RIGHT: scrolling insight column ──────────────────── */}
+      <aside className="flex flex-col gap-px bg-border lg:h-screen lg:overflow-y-auto">
+        {/* stat readouts */}
+        <div className="grid grid-cols-3 gap-px bg-border">
+          <Stat label="Spread" value={`${stats.delta.toFixed(1)}°`} tone="text-critical" />
+          <Stat label="Peak" value={`${stats.max.toFixed(1)}°`} tone="text-danger" />
+          <Stat label="Mean" value={`${stats.avg.toFixed(1)}°`} tone="text-caution" />
+        </div>
 
-        <aside className="space-y-4">
-          <div className="rounded-xl border border-border/60 bg-card p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-              Right now on the grid
-            </h2>
-            <p className="mt-3 font-display text-4xl text-heat">{stats.delta.toFixed(1)}°F</p>
-            <p className="text-sm text-muted-foreground">
-              spread between the hottest and coolest block at {frame.label}.
+        {/* forecast scrubber */}
+        <div className="bg-background p-5">
+          <div className="flex items-baseline justify-between">
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+              Forecast hour
             </p>
-            <dl className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Hottest surface</dt>
-                <dd>{stats.hottest.surface_type}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Coolest surface</dt>
-                <dd>{stats.coolest.surface_type}</dd>
-              </div>
-            </dl>
+            <p className="font-mono text-2xl font-bold tracking-tight text-foreground">{frame.label}</p>
           </div>
+          <input
+            type="range"
+            min={0}
+            max={data.frames.length - 1}
+            value={idx}
+            onChange={(e) => setIdx(Number(e.target.value))}
+            className="mt-3 w-full accent-caution"
+            aria-label="Forecast hour"
+          />
+          <div className="mt-1 flex justify-between font-mono text-[10px] text-muted-foreground">
+            {data.frames.map((f, i) => (
+              <span key={f.timestamp} className={i === idx ? "text-caution" : ""}>
+                {f.label}
+              </span>
+            ))}
+          </div>
+        </div>
 
-          <div className="rounded-xl border border-border/60 bg-card p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-              Why is this hot?
-            </h2>
-            {selected ? (
-              <div className="mt-3 space-y-3 text-sm">
-                <p className="font-display text-3xl">{selected.temp_f.toFixed(1)}°F</p>
-                <p className="text-muted-foreground">
-                  Tile {selected.id} · {selected.lat.toFixed(4)}, {selected.lng.toFixed(4)}
-                </p>
-                <ContextRow label="Surface type" value={selected.surface_type} />
-                <ContextRow label="Shade" value={`${Math.round(selected.shade_index * 100)}%`} />
-                <ContextRow label="Vegetation" value={`${Math.round(selected.vegetation_index * 100)}%`} />
-                <p className="text-muted-foreground">
-                  {selected.temp_f - stats.min > 0
-                    ? `${(selected.temp_f - stats.min).toFixed(1)}°F hotter than the coolest block on screen.`
-                    : "This is the coolest block on screen."}
-                </p>
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-muted-foreground">
-                Tap any tile to see its surface, shade and vegetation context.
+        {/* tile inspector */}
+        <div className="bg-background p-5">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            Tile inspector
+          </p>
+          {selected ? (
+            <div className="mt-3 space-y-3">
+              <p className="font-mono text-4xl font-bold tracking-tight text-danger">
+                {selected.temp_f.toFixed(1)}°F
               </p>
-            )}
-          </div>
+              <p className="font-mono text-[11px] text-muted-foreground">
+                {selected.id} · {selected.lat.toFixed(4)}, {selected.lng.toFixed(4)}
+              </p>
+              <ContextRow label="Surface" value={selected.surface_type} />
+              <ContextRow label="Shade" value={`${Math.round(selected.shade_index * 100)}%`} />
+              <ContextRow label="Vegetation" value={`${Math.round(selected.vegetation_index * 100)}%`} />
+              <p className="border-l-2 border-caution/60 pl-3 text-xs text-muted-foreground">
+                {selected.temp_f - stats.min > 0
+                  ? `${(selected.temp_f - stats.min).toFixed(1)}°F hotter than the coolest block on screen.`
+                  : "Coolest block on screen."}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Tap any tile on the grid to read its surface, shade and vegetation context.
+            </p>
+          )}
+        </div>
 
+        {/* surface extremes */}
+        <div className="grid grid-cols-2 gap-px bg-border">
+          <Stat label="Hottest surface" value={stats.hottest.surface_type} tone="text-danger" small />
+          <Stat label="Coolest surface" value={stats.coolest.surface_type} tone="text-cool" small />
+        </div>
+
+        <div className="bg-background">
           <RecommendationPanel buildInput={buildInput} />
-        </aside>
-      </div>
+        </div>
+
+        <div className="grow bg-background p-5">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            HeatSafe AI · FortyGuard Hackathon '26
+          </p>
+        </div>
+      </aside>
     </main>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  tone,
+  small,
+}: {
+  label: string;
+  value: string;
+  tone: string;
+  small?: boolean;
+}) {
+  return (
+    <div className="bg-background p-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <p
+        className={`mt-1 font-mono font-bold tracking-tight ${tone} ${
+          small ? "text-sm capitalize" : "text-2xl"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
 
 function ContextRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between border-t border-border/50 pt-2">
-      <span className="text-muted-foreground">{label}</span>
-      <span>{value}</span>
+    <div className="flex justify-between border-t border-border pt-2 text-sm">
+      <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <span className="capitalize">{value}</span>
     </div>
   );
 }
