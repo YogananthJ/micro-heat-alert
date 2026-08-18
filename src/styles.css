@@ -96,15 +96,15 @@
   --popover: var(--surface-raised);
   --popover-foreground: var(--text);
   --primary: var(--caution);
-  --primary-foreground: #0a0d13;
+  --primary-foreground: #08192e;
   --secondary: var(--surface-raised);
   --secondary-foreground: var(--text);
   --muted: var(--surface-raised);
   --muted-foreground: var(--text-muted);
   --accent: var(--cool);
-  --accent-foreground: #0a0d13;
+  --accent-foreground: #08192e;
   --destructive: var(--critical);
-  --destructive-foreground: #0a0d13;
+  --destructive-foreground: #08192e;
   --border: var(--line);
   --input: var(--line);
   --ring: var(--cool);
