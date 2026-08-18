@@ -55,7 +55,7 @@ export default function HeatLeafletMap({ frame, onSelect, selectedId }: Props) {
           [cell.lat + h, cell.lng + h],
         ],
         {
-          color: isSelected ? "#EDEFF3" : t > 0.92 ? "#FF2D6B" : "transparent",
+          color: isSelected ? "#E8F1F8" : t > 0.92 ? "#FF6B35" : "transparent",
           weight: isSelected ? 2 : t > 0.92 ? 1 : 0,
           fillColor: heatColor(cell.temp_f, min, max),
           fillOpacity: 0.05,
