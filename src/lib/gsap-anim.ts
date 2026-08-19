@@ -55,9 +55,9 @@ export function useScrollReveal<T extends HTMLElement>(selector: string, scrolle
           ease: "power3.out",
           scrollTrigger: {
             trigger: item,
-            scroller: scroller ?? undefined,
             start: "top 95%",
             once: true,
+            ...(scroller ? { scroller } : {}),
           },
         });
       });
