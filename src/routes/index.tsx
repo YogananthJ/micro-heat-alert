@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
 import { lazy, Suspense, useMemo, useState } from "react";
-import { getHeatmapData, heatColor, type HeatCell } from "@/lib/heatmap";
+import { heatColor, type HeatCell } from "@/lib/heatmap";
+import { fetchHeatmap } from "@/lib/heatmap.functions";
 import RecommendationPanel from "@/components/RecommendationPanel";
 import type { Activity, RecommendInput } from "@/lib/recommend-prompt";
 
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: () => getHeatmapData(6),
+  loader: () => fetchHeatmap({ data: { startHour: 6 } }),
   component: Index,
 });
 
@@ -107,10 +108,16 @@ function Index() {
             </p>
           </div>
           <span
-            className="hs-rise border border-cool/40 bg-background/80 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-cool backdrop-blur"
+            className={`hs-rise border bg-background/80 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] backdrop-blur ${
+              data.source === "fortyguard"
+                ? "border-cool/40 text-cool"
+                : "border-caution/40 text-caution"
+            }`}
             style={{ animationDelay: "120ms" }}
+            title={data.error ?? undefined}
           >
-            <span className="hs-blink">●</span> {data.source} feed
+            <span className="hs-blink">●</span>{" "}
+            {data.source === "fortyguard" ? "FortyGuard live" : "mock fallback"}
           </span>
         </div>
 
