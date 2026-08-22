@@ -1,9 +1,12 @@
 /**
  * FortyGuard Temperature API client (server-only).
  *
- * Flow: POST /v1/heatmap creates an async activity, then we poll until the
- * grid is ready. Response shapes vary slightly between dev/prod, so the
- * parser is intentionally tolerant and normalises to { lat, lng, temp_f }.
+ * Verified flow (api.fortyguard.com):
+ *   POST /v1/heatmap  { polygon_aoi: GeoJSON Polygon, date_time, granularity: 60|80|100 }
+ *     -> { data: { activity_id } }
+ *   GET  /v1/status/{activity_id}
+ *     -> { data: { status: "Processing" | "Completed", result: { map_data: FeatureCollection } } }
+ * Tile properties carry average/min/max temperature in Celsius.
  */
 
 import { TARGET, type HeatCell, type HeatFrame, type SurfaceType } from "./heatmap";
@@ -14,39 +17,32 @@ export interface RawPoint {
   temp_f: number;
 }
 
-const num = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN);
+const cToF = (c: number) => Math.round((c * 9) / 5 + 32 * 10) / 10;
 
-function cToF(v: number) {
-  // FortyGuard returns Celsius; anything already > 60 is assumed Fahrenheit.
-  return v > 60 ? v : v * 9 / 5 + 32;
+interface Feature {
+  properties?: { average_temperature?: number; min_temperature?: number; max_temperature?: number };
+  geometry?: { coordinates?: number[][][] };
 }
 
-/** Pull every {lat,lon,temperature}-ish object out of an arbitrary payload. */
-export function extractPoints(payload: unknown): RawPoint[] {
+/** GeoJSON tiles -> centroid points in °F. */
+export function featuresToPoints(features: Feature[]): RawPoint[] {
   const out: RawPoint[] = [];
-  const seen = new Set<unknown>();
-
-  const walk = (node: unknown) => {
-    if (!node || typeof node !== "object" || seen.has(node)) return;
-    seen.add(node);
-    if (Array.isArray(node)) {
-      for (const n of node) walk(n);
-      return;
+  for (const f of features) {
+    const ring = f.geometry?.coordinates?.[0];
+    const c = f.properties?.average_temperature;
+    if (!ring?.length || typeof c !== "number") continue;
+    let lat = 0;
+    let lng = 0;
+    for (const [x, y] of ring) {
+      lng += x ?? 0;
+      lat += y ?? 0;
     }
-    const o = node as Record<string, unknown>;
-    const lat = num(o["lat"] ?? o["latitude"] ?? o["y"]);
-    const lng = num(o["lng"] ?? o["lon"] ?? o["longitude"] ?? o["x"]);
-    const t = num(
-      o["temperature"] ?? o["temp"] ?? o["value"] ?? o["temperature_c"] ?? o["air_temperature"],
-    );
-    if (Number.isFinite(lat) && Number.isFinite(lng) && Number.isFinite(t)) {
-      out.push({ lat, lng, temp_f: Math.round(cToF(t) * 10) / 10 });
-      return;
-    }
-    for (const v of Object.values(o)) walk(v);
-  };
-
-  walk(payload);
+    out.push({
+      lat: lat / ring.length,
+      lng: lng / ring.length,
+      temp_f: Math.round(((c * 9) / 5 + 32) * 10) / 10,
+    });
+  }
   return out;
 }
 
@@ -54,115 +50,119 @@ function aoiPolygon() {
   const [clat, clng] = TARGET.center;
   const dLat = (TARGET.rows * TARGET.cellSize) / 2;
   const dLng = (TARGET.cols * TARGET.cellSize) / 2;
-  return [
-    [clng - dLng, clat - dLat],
-    [clng + dLng, clat - dLat],
-    [clng + dLng, clat + dLat],
-    [clng - dLng, clat + dLat],
-    [clng - dLng, clat - dLat],
-  ];
+  return {
+    type: "Polygon",
+    coordinates: [
+      [
+        [clng - dLng, clat - dLat],
+        [clng + dLng, clat - dLat],
+        [clng + dLng, clat + dLat],
+        [clng - dLng, clat + dLat],
+        [clng - dLng, clat - dLat],
+      ],
+    ],
+  };
 }
 
 async function call(base: string, key: string, path: string, init?: RequestInit) {
   const res = await fetch(`${base.replace(/\/$/, "")}${path}`, {
     ...init,
-    headers: {
-      "api-key": key,
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers: { "api-key": key, "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
   const text = await res.text();
-  let json: unknown = null;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    /* non-JSON */
-  }
-  if (!res.ok) throw new Error(`FortyGuard ${path} ${res.status}: ${text.slice(0, 240)}`);
-  return json;
+  if (!res.ok) throw new Error(`FortyGuard ${path} ${res.status}: ${text.slice(0, 200)}`);
+  return JSON.parse(text) as Record<string, any>;
 }
 
-/** Requests the hyperlocal grid for the target AOI and returns raw points. */
+function isoDate(offsetDays: number) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+
+async function runHeatmap(base: string, key: string, date: string, hour: number) {
+  const created = await call(base, key, "/v1/heatmap", {
+    method: "POST",
+    body: JSON.stringify({
+      polygon_aoi: aoiPolygon(),
+      date_time: {
+        start_date: date,
+        start_time: `${String(hour).padStart(2, "0")}:00`,
+        filter_type: 1,
+      },
+      granularity: 100,
+    }),
+  });
+  const activityId: string | undefined = created?.["data"]?.activity_id;
+  if (!activityId) throw new Error("FortyGuard: no activity_id returned");
+
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 2500));
+    const status = await call(base, key, `/v1/status/${activityId}`);
+    const d = status?.["data"];
+    if (d?.status === "Completed") {
+      return featuresToPoints((d.result?.map_data?.features ?? []) as Feature[]);
+    }
+    if (d?.status && d.status !== "Processing") {
+      throw new Error(`FortyGuard job ${d.status}`);
+    }
+  }
+  throw new Error("FortyGuard: heatmap activity timed out");
+}
+
+/** Requests the hyperlocal grid for the target AOI and returns tile points. */
 export async function fetchHeatmapPoints(startHour: number): Promise<RawPoint[]> {
   const key = process.env["FORTYGUARD_API_KEY"];
   const base = process.env["FORTYGUARD_BASE_URL"] || "https://api.fortyguard.com";
   if (!key) throw new Error("FORTYGUARD_API_KEY missing");
 
-  const now = new Date();
-  const body = {
-    polygon_aoi: aoiPolygon(),
-    date_time: {
-      start_date: now.toISOString().slice(0, 10),
-      start_time: `${String(startHour).padStart(2, "0")}:00`,
-      filter_type: 1,
-    },
-    granularity: 100,
-  };
-
-  const created = (await call(base, key, "/v1/heatmap", {
-    method: "POST",
-    body: JSON.stringify(body),
-  })) as Record<string, unknown> | null;
-
-  let points = extractPoints(created);
-  if (points.length) return points;
-
-  const activityId =
-    (created?.["activity_id"] as string | undefined) ??
-    (created?.["activityId"] as string | undefined) ??
-    ((created?.["data"] as Record<string, unknown> | undefined)?.["activity_id"] as
-      | string
-      | undefined);
-  if (!activityId) throw new Error("FortyGuard: no activity_id and no inline points");
-
-  for (let i = 0; i < 12; i++) {
-    await new Promise((r) => setTimeout(r, 1500));
-    const result = await call(base, key, `/v1/heatmap/${activityId}`);
-    points = extractPoints(result);
+  // Same-day data isn't always published yet — fall back one day.
+  for (const offset of [1, 2]) {
+    const points = await runHeatmap(base, key, isoDate(offset), startHour);
     if (points.length) return points;
   }
-  throw new Error("FortyGuard: heatmap activity timed out");
+  throw new Error("FortyGuard: no tiles returned for this AOI");
 }
 
-const SURFACE_BY_TEMP: { max: number; type: SurfaceType; shade: number; veg: number }[] = [
-  { max: -6, type: "tree canopy", shade: 0.8, veg: 0.9 },
-  { max: -3.5, type: "water", shade: 0.25, veg: 0.15 },
-  { max: -1, type: "grass", shade: 0.3, veg: 0.6 },
-  { max: 3, type: "concrete", shade: 0.15, veg: 0.05 },
+const SURFACE_BY_DEV: { max: number; type: SurfaceType; shade: number; veg: number }[] = [
+  { max: -1.2, type: "tree canopy", shade: 0.8, veg: 0.9 },
+  { max: -0.7, type: "water", shade: 0.25, veg: 0.15 },
+  { max: -0.2, type: "grass", shade: 0.3, veg: 0.6 },
+  { max: 0.6, type: "concrete", shade: 0.15, veg: 0.05 },
   { max: Infinity, type: "asphalt", shade: 0.05, veg: 0.02 },
 ];
 
 /**
- * Snap raw API points onto our fixed inspection grid and infer surface context
- * from each cell's deviation from the block mean (hot = paved, cool = shaded).
+ * Aggregate API tiles onto our fixed 10x10 inspection grid and infer surface
+ * context from each block's deviation from the AOI mean (hot = paved, cool = shaded).
  */
 export function pointsToCells(points: RawPoint[]): HeatCell[] {
-  const cells: HeatCell[] = [];
   const [clat, clng] = TARGET.center;
-  const temps: number[] = [];
+  const cells: HeatCell[] = [];
+  const buckets = new Map<string, number[]>();
+
+  for (const p of points) {
+    const r = Math.floor((p.lat - clat) / TARGET.cellSize + TARGET.rows / 2);
+    const c = Math.floor((p.lng - clng) / TARGET.cellSize + TARGET.cols / 2);
+    if (r < 0 || c < 0 || r >= TARGET.rows || c >= TARGET.cols) continue;
+    const k = `${r}-${c}`;
+    const arr = buckets.get(k) ?? [];
+    arr.push(p.temp_f);
+    buckets.set(k, arr);
+  }
+
+  const all = points.map((p) => p.temp_f);
+  const globalMean = all.reduce((a, b) => a + b, 0) / Math.max(1, all.length);
 
   for (let r = 0; r < TARGET.rows; r++) {
     for (let c = 0; c < TARGET.cols; c++) {
-      const lat = clat + (r - TARGET.rows / 2 + 0.5) * TARGET.cellSize;
-      const lng = clng + (c - TARGET.cols / 2 + 0.5) * TARGET.cellSize;
-      let best: RawPoint | null = null;
-      let bestD = Infinity;
-      for (const p of points) {
-        const d = (p.lat - lat) ** 2 + (p.lng - lng) ** 2;
-        if (d < bestD) {
-          bestD = d;
-          best = p;
-        }
-      }
-      const temp = best ? best.temp_f : NaN;
-      temps.push(temp);
+      const vals = buckets.get(`${r}-${c}`) ?? [];
+      const t = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : globalMean;
       cells.push({
         id: `${r}-${c}`,
-        lat,
-        lng,
-        temp_f: temp,
+        lat: clat + (r - TARGET.rows / 2 + 0.5) * TARGET.cellSize,
+        lng: clng + (c - TARGET.cols / 2 + 0.5) * TARGET.cellSize,
+        temp_f: Math.round(t * 10) / 10,
         surface_type: "concrete",
         shade_index: 0.15,
         vegetation_index: 0.05,
@@ -170,12 +170,10 @@ export function pointsToCells(points: RawPoint[]): HeatCell[] {
     }
   }
 
-  const valid = temps.filter((t) => Number.isFinite(t));
-  const mean = valid.reduce((a, b) => a + b, 0) / Math.max(1, valid.length);
+  const mean = cells.reduce((a, c) => a + c.temp_f, 0) / Math.max(1, cells.length);
   for (const cell of cells) {
-    if (!Number.isFinite(cell.temp_f)) cell.temp_f = Math.round(mean * 10) / 10;
     const dev = cell.temp_f - mean;
-    const s = SURFACE_BY_TEMP.find((x) => dev <= x.max)!;
+    const s = SURFACE_BY_DEV.find((x) => dev <= x.max)!;
     cell.surface_type = s.type;
     cell.shade_index = s.shade;
     cell.vegetation_index = s.veg;
@@ -188,9 +186,9 @@ function baseTempAt(hour: number) {
 }
 
 /**
- * The API is queried once for the current hour; the following hours are
- * projected with the diurnal curve while keeping each cell's measured
- * hyperlocal offset (the whole point of the app).
+ * The API is queried once for the reference hour; following hours are projected
+ * with the diurnal curve while preserving each block's measured hyperlocal
+ * offset, and paved blocks amplify the afternoon swing.
  */
 export function projectFrames(cells: HeatCell[], startHour: number, hours = 12): HeatFrame[] {
   const mean = cells.reduce((a, c) => a + c.temp_f, 0) / Math.max(1, cells.length);
@@ -198,8 +196,7 @@ export function projectFrames(cells: HeatCell[], startHour: number, hours = 12):
   for (let h = 0; h < hours; h++) {
     const hour = (startHour + h) % 24;
     const delta = baseTempAt(hour) - baseTempAt(startHour);
-    // paved surfaces amplify the swing, canopy damps it
-    const load = Math.max(0, Math.sin(((hour - 7) / 24) * Math.PI * 2)) * 0.5 + 0.75;
+    const load = Math.max(0, Math.sin(((hour - 7) / 24) * Math.PI * 2)) * 1.4 + 0.8;
     frames.push({
       timestamp: `${new Date().toISOString().slice(0, 10)}T${String(hour).padStart(2, "0")}:00:00`,
       label: `${((hour + 11) % 12) + 1}${hour < 12 ? "am" : "pm"}`,
@@ -211,3 +208,5 @@ export function projectFrames(cells: HeatCell[], startHour: number, hours = 12):
   }
   return frames;
 }
+
+export { cToF };
