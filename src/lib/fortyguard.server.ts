@@ -210,3 +210,20 @@ export function projectFrames(cells: HeatCell[], startHour: number, hours = 12):
 }
 
 export { cToF };
+
+/**
+ * In-memory cache: the FortyGuard job takes ~50s, so the resolved grid for a
+ * given (hour, day) key is reused for the lifetime of the server instance.
+ */
+const gridCache = new Map<string, Promise<HeatCell[]>>();
+
+export function getCachedCells(startHour: number): Promise<HeatCell[]> {
+  const key = `${new Date().toISOString().slice(0, 13)}:${startHour}`;
+  let entry = gridCache.get(key);
+  if (!entry) {
+    entry = fetchHeatmapPoints(startHour).then(pointsToCells);
+    entry.catch(() => gridCache.delete(key));
+    gridCache.set(key, entry);
+  }
+  return entry;
+}

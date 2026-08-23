@@ -37,7 +37,7 @@ export const Route = createFileRoute("/")({
 function Index() {
   const initial = Route.useLoaderData();
   const loadLive = useServerFn(fetchHeatmap);
-  const { data: live } = useQuery({
+  const { data: live, isPending: liveLoading } = useQuery({
     queryKey: ["heatmap", 6],
     queryFn: () => loadLive({ data: { startHour: 6 } }),
     staleTime: 10 * 60 * 1000,
@@ -123,13 +123,19 @@ function Index() {
             className={`hs-rise border bg-background/80 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] backdrop-blur ${
               data.source === "fortyguard"
                 ? "border-cool/40 text-cool"
-                : "border-caution/40 text-caution"
+                : liveLoading
+                  ? "border-border text-muted-foreground"
+                  : "border-caution/40 text-caution"
             }`}
             style={{ animationDelay: "120ms" }}
             title={live?.error ?? undefined}
           >
             <span className="hs-blink">●</span>{" "}
-            {data.source === "fortyguard" ? "FortyGuard live" : "mock fallback"}
+            {data.source === "fortyguard"
+              ? "FortyGuard live"
+              : liveLoading
+                ? "syncing live feed…"
+                : "mock fallback"}
           </span>
         </div>
 

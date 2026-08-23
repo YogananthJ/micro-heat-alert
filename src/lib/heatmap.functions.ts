@@ -14,11 +14,8 @@ export const fetchHeatmap = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<HeatmapResponse & { error?: string }> => {
     const { startHour } = data;
     try {
-      const { fetchHeatmapPoints, pointsToCells, projectFrames } = await import(
-        "./fortyguard.server"
-      );
-      const points = await fetchHeatmapPoints(startHour);
-      const cells = pointsToCells(points);
+      const { getCachedCells, projectFrames } = await import("./fortyguard.server");
+      const cells = await getCachedCells(startHour);
       return {
         activity_id: "fortyguard-live",
         city: TARGET.city,
