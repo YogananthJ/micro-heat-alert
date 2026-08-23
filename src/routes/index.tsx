@@ -37,7 +37,7 @@ export const Route = createFileRoute("/")({
 function Index() {
   const initial = Route.useLoaderData();
   const loadLive = useServerFn(fetchHeatmap);
-  const { data: live } = useQuery({
+  const { data: live, isPending: liveLoading } = useQuery({
     queryKey: ["heatmap", 6],
     queryFn: () => loadLive({ data: { startHour: 6 } }),
     staleTime: 10 * 60 * 1000,
