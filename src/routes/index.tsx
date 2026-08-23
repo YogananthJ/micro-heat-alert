@@ -28,12 +28,22 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: () => fetchHeatmap({ data: { startHour: 6 } }),
+  // Instant mock render; the live FortyGuard feed is fetched client-side
+  // because its polling flow can exceed the loader request budget.
+  loader: () => getHeatmapData(6),
   component: Index,
 });
 
 function Index() {
-  const data = Route.useLoaderData();
+  const initial = Route.useLoaderData();
+  const loadLive = useServerFn(fetchHeatmap);
+  const { data: live } = useQuery({
+    queryKey: ["heatmap", 6],
+    queryFn: () => loadLive({ data: { startHour: 6 } }),
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+  const data = live ?? initial;
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState<HeatCell | null>(null);
 
