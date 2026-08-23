@@ -126,7 +126,7 @@ function Index() {
                 : "border-caution/40 text-caution"
             }`}
             style={{ animationDelay: "120ms" }}
-            title={data.error ?? undefined}
+            title={live?.error ?? undefined}
           >
             <span className="hs-blink">●</span>{" "}
             {data.source === "fortyguard" ? "FortyGuard live" : "mock fallback"}
