@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense, useMemo, useState } from "react";
-import { heatColor, type HeatCell } from "@/lib/heatmap";
+import { getHeatmapData, heatColor, type HeatCell } from "@/lib/heatmap";
 import { fetchHeatmap } from "@/lib/heatmap.functions";
 import RecommendationPanel from "@/components/RecommendationPanel";
 import type { Activity, RecommendInput } from "@/lib/recommend-prompt";
@@ -26,12 +28,22 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: () => fetchHeatmap({ data: { startHour: 6 } }),
+  // Instant mock render; the live FortyGuard feed is fetched client-side
+  // because its polling flow can exceed the loader request budget.
+  loader: () => getHeatmapData(6),
   component: Index,
 });
 
 function Index() {
-  const data = Route.useLoaderData();
+  const initial = Route.useLoaderData();
+  const loadLive = useServerFn(fetchHeatmap);
+  const { data: live } = useQuery({
+    queryKey: ["heatmap", 6],
+    queryFn: () => loadLive({ data: { startHour: 6 } }),
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+  const data = live ?? initial;
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState<HeatCell | null>(null);
 
@@ -114,7 +126,7 @@ function Index() {
                 : "border-caution/40 text-caution"
             }`}
             style={{ animationDelay: "120ms" }}
-            title={data.error ?? undefined}
+            title={live?.error ?? undefined}
           >
             <span className="hs-blink">●</span>{" "}
             {data.source === "fortyguard" ? "FortyGuard live" : "mock fallback"}
