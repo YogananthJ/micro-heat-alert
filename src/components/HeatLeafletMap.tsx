@@ -18,10 +18,11 @@ export default function HeatLeafletMap({ frame, onSelect, selectedId }: Props) {
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = L.map(containerRef.current, { zoomControl: true, attributionControl: false }).setView(
-      TARGET.center,
-      13.6,
-    );
+    const map = L.map(containerRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+    }).setView(TARGET.center, 13.6);
+    L.control.zoom({ position: "bottomright" }).addTo(map);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
     }).addTo(map);
