@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense, useMemo, useState } from "react";
-import { heatColor, type HeatCell } from "@/lib/heatmap";
+import { getHeatmapData, heatColor, type HeatCell } from "@/lib/heatmap";
 import { fetchHeatmap } from "@/lib/heatmap.functions";
 import RecommendationPanel from "@/components/RecommendationPanel";
 import type { Activity, RecommendInput } from "@/lib/recommend-prompt";

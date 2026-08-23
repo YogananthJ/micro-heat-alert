@@ -96,8 +96,8 @@ async function runHeatmap(base: string, key: string, date: string, hour: number)
   const activityId: string | undefined = created?.["data"]?.activity_id;
   if (!activityId) throw new Error("FortyGuard: no activity_id returned");
 
-  for (let i = 0; i < 20; i++) {
-    await new Promise((r) => setTimeout(r, 2500));
+  for (let i = 0; i < 12; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
     const status = await call(base, key, `/v1/status/${activityId}`);
     const d = status?.["data"];
     if (d?.status === "Completed") {
