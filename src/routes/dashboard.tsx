@@ -10,7 +10,7 @@ import type { Activity, RecommendInput } from "@/lib/recommend-prompt";
 
 const HeatLeafletMap = lazy(() => import("@/components/HeatLeafletMap"));
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "HeatSafe AI — Hyperlocal Heat Risk for Phoenix" },
