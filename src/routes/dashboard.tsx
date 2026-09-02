@@ -6,6 +6,7 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { getHeatmapData, heatColor, type HeatCell } from "@/lib/heatmap";
 import { fetchHeatmap } from "@/lib/heatmap.functions";
 import RecommendationPanel from "@/components/RecommendationPanel";
+import RiskPanel from "@/components/RiskPanel";
 import type { Activity, RecommendInput } from "@/lib/recommend-prompt";
 
 const HeatLeafletMap = lazy(() => import("@/components/HeatLeafletMap"));
@@ -13,7 +14,7 @@ const HeatLeafletMap = lazy(() => import("@/components/HeatLeafletMap"));
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "HeatSafe AI — Hyperlocal Heat Risk for Phoenix" },
+      { title: "Heat Dashboard | HeatSafe AI" },
       {
         name: "description",
         content:
@@ -88,9 +89,9 @@ function Index() {
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground lg:grid lg:h-screen lg:grid-cols-[1fr_minmax(360px,34vw)] lg:overflow-hidden">
+    <main className="min-h-screen bg-background text-foreground lg:grid lg:h-[calc(100vh-3.5rem)] lg:grid-cols-[1fr_minmax(360px,34vw)] lg:overflow-hidden">
       {/* ── LEFT: sticky full-height map ─────────────────────── */}
-      <section className="hs-scan relative h-[62vh] border-b border-border lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
+      <section className="hs-scan relative h-[62vh] border-b border-border lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:border-b-0 lg:border-r">
         <ClientOnly
           fallback={
             <div className="grid h-full place-items-center font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">
@@ -159,7 +160,7 @@ function Index() {
       </section>
 
       {/* ── RIGHT: scrolling insight column ──────────────────── */}
-      <aside className="flex flex-col gap-px bg-border lg:h-screen lg:overflow-y-auto">
+      <aside className="flex flex-col gap-px bg-border lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto">
         {/* stat readouts */}
         <div className="grid grid-cols-3 gap-px bg-border">
           <Stat label="Spread" value={`${stats.delta.toFixed(1)}°`} tone="text-critical" />
@@ -226,6 +227,14 @@ function Index() {
         <div className="grid grid-cols-2 gap-px bg-border">
           <Stat label="Hottest surface" value={stats.hottest.surface_type} tone="text-danger" small />
           <Stat label="Coolest surface" value={stats.coolest.surface_type} tone="text-cool" small />
+        </div>
+
+        <div className="bg-background">
+          <RiskPanel
+            locationId="phoenix"
+            temperatureC={Math.round((((stats.max - 32) * 5) / 9) * 10) / 10}
+            persistenceHours={data.frames.length}
+          />
         </div>
 
         <div className="bg-background">

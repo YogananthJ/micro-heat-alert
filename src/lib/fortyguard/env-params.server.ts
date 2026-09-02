@@ -37,10 +37,13 @@ export function parseEnvironment(payload: unknown): EnvironmentReading {
   const body = payload as EnvBody | undefined;
   const flat = (body?.result ?? body?.data ?? body ?? {}) as Record<string, unknown>;
   const nested = (flat["parameters"] ?? flat["values"] ?? flat) as Record<string, unknown>;
+  const heatIndexC = pick(nested, ["heat_index", "heatIndex", "heat_index_c"]);
+  const relativeHumidity = pick(nested, ["relative_humidity", "relativeHumidity", "humidity"]);
+  const wetBulbC = pick(nested, ["wet_bulb_temperature", "wetBulb", "wet_bulb"]);
   return {
-    heatIndexC: pick(nested, ["heat_index", "heatIndex", "heat_index_c"]),
-    relativeHumidity: pick(nested, ["relative_humidity", "relativeHumidity", "humidity"]),
-    wetBulbC: pick(nested, ["wet_bulb_temperature", "wetBulb", "wet_bulb"]),
+    ...(heatIndexC !== undefined ? { heatIndexC } : {}),
+    ...(relativeHumidity !== undefined ? { relativeHumidity } : {}),
+    ...(wetBulbC !== undefined ? { wetBulbC } : {}),
   };
 }
 
