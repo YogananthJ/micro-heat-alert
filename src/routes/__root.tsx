@@ -77,8 +77,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "HeatSafe AI" },
-      { name: "description", content: "Hyperlocal heat risk intelligence" },
+      { title: "HeatSafe AI — Hyperlocal Heat Intelligence" },
+      { name: "description", content: "Hyperlocal heat intelligence turned into explainable risk insights." },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "HeatSafe AI" },
       { property: "og:description", content: "Hyperlocal heat risk intelligence" },
@@ -91,7 +91,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
       },
       {
         rel: "stylesheet",
@@ -125,8 +125,63 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <div className="flex min-h-screen flex-col">
+        <SiteNav />
+        <div className="grow">
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </div>
+        <SiteFooter />
+      </div>
     </QueryClientProvider>
+  );
+}
+
+function SiteNav() {
+  return (
+    <header className="sticky top-0 z-[900] border-b border-border bg-background/85 backdrop-blur">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+        <Link to="/" className="flex items-baseline gap-2">
+          <span className="text-base font-bold tracking-tight">HeatSafe AI</span>
+          <span className="hidden text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:inline">
+            Hyperlocal Heat Intelligence
+          </span>
+        </Link>
+        <div className="flex items-center gap-1 text-sm">
+          <Link
+            to="/dashboard"
+            className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            activeProps={{ className: "rounded-md px-3 py-1.5 text-foreground font-semibold" }}
+          >
+            Heat Dashboard
+          </Link>
+          <Link
+            to="/how-it-works"
+            className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            activeProps={{ className: "rounded-md px-3 py-1.5 text-foreground font-semibold" }}
+          >
+            How It Works
+          </Link>
+        </div>
+      </nav>
+    </header>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="border-t border-border">
+      <div className="mx-auto max-w-6xl space-y-3 px-6 py-10 text-sm">
+        <p className="font-semibold">See the heat. Understand the risk. Act with confidence.</p>
+        <p className="text-muted-foreground">Powered by FortyGuard Temperature Intelligence</p>
+        <p className="text-xs text-muted-foreground">
+          HeatSafe Risk is an experimental decision-support model and is not medical, emergency, or
+          engineering advice.
+        </p>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          Hackathon Prototype · 2026 · v0.1.0
+        </p>
+      </div>
+    </footer>
   );
 }
