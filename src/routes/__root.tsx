@@ -97,7 +97,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -137,31 +138,47 @@ function RootComponent() {
   );
 }
 
+const NAV_LINKS = [
+  { to: "/dashboard", label: "Heat Dashboard" },
+  { to: "/routes", label: "Heat-Aware Routes" },
+  { to: "/planner", label: "City Heat Planner" },
+  { to: "/how-it-works", label: "How It Works" },
+] as const;
+
 function SiteNav() {
   return (
     <header className="sticky top-0 z-[900] border-b border-border bg-background/85 backdrop-blur">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-        <Link to="/" className="flex items-baseline gap-2">
+      <nav
+        aria-label="Primary"
+        className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6"
+      >
+        <Link to="/" className="flex items-center gap-2">
+          <img
+            src="/favicon.png"
+            alt=""
+            width={24}
+            height={24}
+            className="h-6 w-6"
+            aria-hidden="true"
+          />
           <span className="text-base font-bold tracking-tight">HeatSafe AI</span>
-          <span className="hidden text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:inline">
+          <span className="hidden text-[10px] uppercase tracking-[0.2em] text-muted-foreground lg:inline">
             Hyperlocal Heat Intelligence
           </span>
         </Link>
-        <div className="flex items-center gap-1 text-sm">
-          <Link
-            to="/dashboard"
-            className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            activeProps={{ className: "rounded-md px-3 py-1.5 text-foreground font-semibold" }}
-          >
-            Heat Dashboard
-          </Link>
-          <Link
-            to="/how-it-works"
-            className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            activeProps={{ className: "rounded-md px-3 py-1.5 text-foreground font-semibold" }}
-          >
-            How It Works
-          </Link>
+        <div className="flex flex-wrap items-center gap-1 text-sm">
+          {NAV_LINKS.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="rounded-md px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:px-3"
+              activeProps={{
+                className: "rounded-md px-2.5 py-1.5 sm:px-3 text-foreground font-semibold",
+              }}
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
       </nav>
     </header>
@@ -171,16 +188,50 @@ function SiteNav() {
 function SiteFooter() {
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto max-w-6xl space-y-3 px-6 py-10 text-sm">
-        <p className="font-semibold">See the heat. Understand the risk. Act with confidence.</p>
-        <p className="text-muted-foreground">Powered by FortyGuard Temperature Intelligence</p>
-        <p className="text-xs text-muted-foreground">
-          HeatSafe Risk is an experimental decision-support model and is not medical, emergency, or
-          engineering advice.
-        </p>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          Hackathon Prototype · 2026 · v0.1.0
-        </p>
+      <div className="mx-auto max-w-6xl px-6 py-10 text-sm">
+        <div className="grid gap-8 sm:grid-cols-3">
+          <div className="space-y-2">
+            <p className="font-semibold">HeatSafe AI</p>
+            <p className="text-muted-foreground">See the heat. Understand the risk. Act with confidence.</p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Product
+            </p>
+            <ul className="space-y-1">
+              {NAV_LINKS.slice(0, 3).map((item) => (
+                <li key={item.to}>
+                  <Link to={item.to} className="text-muted-foreground hover:text-foreground">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Data
+            </p>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>
+                <Link to="/how-it-works" className="hover:text-foreground">
+                  How HeatSafe works
+                </Link>
+              </li>
+              <li>Powered by FortyGuard Temperature Intelligence</li>
+              <li>HeatSafe Risk · Model v1.0</li>
+            </ul>
+          </div>
+        </div>
+        <div className="mt-8 space-y-2 border-t border-border pt-6">
+          <p className="text-xs text-muted-foreground">
+            HeatSafe Risk is an experimental decision-support model and is not medical, emergency, or
+            engineering advice.
+          </p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            Hackathon Prototype · 2026 · v0.1.0 · Built for FortyGuard Hackathon '26
+          </p>
+        </div>
       </div>
     </footer>
   );

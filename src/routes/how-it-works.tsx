@@ -15,8 +15,12 @@ export const Route = createFileRoute("/how-it-works")({
         content: "The HeatSafe Risk v1.0 model, its inputs, provenance and limitations.",
       },
       { property: "og:type", content: "article" },
+      { property: "og:url", content: "https://micro-heat-alert.lovable.app/how-it-works" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:image", content: "https://micro-heat-alert.lovable.app/og-image.jpg" },
+      { name: "twitter:image", content: "https://micro-heat-alert.lovable.app/og-image.jpg" },
     ],
+    links: [{ rel: "canonical", href: "https://micro-heat-alert.lovable.app/how-it-works" }],
   }),
   component: HowItWorks,
 });
