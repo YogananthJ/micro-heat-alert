@@ -1,109 +1,79 @@
-# HeatSafe Guide
+# HeatSafe AI — Hyperlocal Heat Intelligence
 
-HeatSafe AI — Build Prompt (FortyGuard Hackathon'26)
+**Turn heat intelligence into action.**
 
-Copy everything below the line into Claude Code, Cowork, or another AI coding assistant to build the project. Fill in the [bracketed] placeholders first (API key, exact endpoint, target city).
+HeatSafe AI transforms hyperlocal temperature intelligence into explainable insights for people,
+businesses, and cities. Built for FortyGuard Hackathon '26.
 
-Context
+## Problem
 
-I'm building HeatSafe AI for FortyGuard Hackathon'26 (build sprint runs through Aug 17, 2026 — I'm working under a tight deadline, so favor a working demo over a complete product). It's a solo/small-team hackathon project, so keep the stack simple, beginner-friendly, and fast to ship.
+City-level temperature reports hide dangerous local variation. A shaded park path can be several
+degrees cooler than the asphalt lot next to it at the same reported "city temperature". People
+walking, commuting, or working outdoors have no way to know which blocks and which hours are
+actually risky.
 
-Problem: City-level temperature reports (a single number for a whole metro area) hide dangerous local variation — a shaded park path can be 9°F+ cooler than an adjacent asphalt lot with no tree cover, even at the same reported "city temperature." People walking, cycling, commuting, or working outdoors have no way to know which specific blocks or times are actually risky.
+## What HeatSafe does
 
-Solution: HeatSafe AI pulls hyperlocal temperature data from FortyGuard's Temperature API, layers AI-based risk interpretation on top of it, and outputs plain-language guidance: which micro-areas are dangerous right now/soon, and safer time windows or routes for a given activity.
+| Step | Surface |
+| --- | --- |
+| SEE — where heat concentrates | Heat Dashboard (`/dashboard`) |
+| PREDICT — when heat peaks and persists | Forecast slider + persistence analytics |
+| DECIDE — compare exposure | HeatSafe Risk panel, City Heat Planner (`/planner`) |
+| ACT — choose cooler options | Heat-Aware Routes (`/routes`) |
 
-Hackathon track fit: primarily Dashboards and Interactive Maps (combine both if time allows — FortyGuard allows combining tracks). Judging will reward: real use of the Temperature API (not just decoration), genuine AI reasoning (not a static lookup table), and a clear, demoable end-to-end flow — not scope.
+Methodology and limitations are documented in-product at `/how-it-works`.
 
-Data source: FortyGuard Temperature API
+## Data source
 
-Base pattern (confirm exact fields against my API key's docs — this may differ slightly per endpoint):
+FortyGuard Temperature Intelligence, called server-side only:
 
-POST https://api.fortyguard.com/v1/heatmap
-Headers: { "api-key": "[YOUR_API_KEY]", "Content-Type": "application/json" }
-Body: {
-  "polygon_aoi": { "type": "Polygon", "coordinates": [[[lng,lat], ...]] },
-  "date_time": { "start_date": "YYYY-MM-DD", "start_time": "HH:MM", "filter_type": 1 },
-  "granularity": 100
-}
+- `POST /v1/heatmap` — hyperlocal ~2 m air temperature grid over a GeoJSON AOI, with async
+  activity polling.
+- Native analytics — threshold exceedance and persistence over the forecast window.
+- Environmental parameters — heat index, relative humidity, wet-bulb temperature where available.
 
+Coverage is U.S.-only. Requests are cached by full request shape; every reading carries a
+`LIVE` / `CACHED` / `DEMO DATA` state naming the source and timestamp.
 
-This returns an activity_id for an async job — poll/fetch the result afterward. There is also a point-based "Heat Intelligence Report" endpoint that takes coordinates directly (no polygon) and returns a report with ~5 contextual layers (surface type, shade, etc.) for a single location — use this for per-location detail views since it's simpler than polling a polygon job.
+## HeatSafe Risk (Model v1.0)
 
-Measurement: ~2 meters above ground, hyperlocal resolution (city-block scale).
+Our own deterministic two-stage model built *using* FortyGuard data — FortyGuard does not compute
+it.
 
-I have [insert: trial key / not yet — flag this]. If I don't have a working key yet, build the app against a small mocked JSON fixture shaped exactly like the real response, isolated behind a single getHeatmapData() function, so swapping in the real API later is a one-line change.
+1. Thermal severity = `0.5 × heat index + 0.3 × wet-bulb + 0.2 × air temperature`
+   (weights renormalize when an input is unavailable).
+2. Final risk = `0.8 × thermal severity + 0.2 × persistence`, banded LOW / MODERATE / HIGH /
+   EXTREME with the drivers and input completeness shown alongside the score.
 
-What to build (MVP scope — 4 days, beginner developer)
+The AI Advisor only explains facts supplied to it; it never invents temperatures.
 
-Cut ruthlessly to this for a working demo. Everything else is a stretch goal.
+## Architecture
 
-One target city/neighborhood, hardcoded — e.g. [insert: your city or a well-known hot city like Phoenix, AZ]. Don't build a location search UI.
+- TanStack Start (React 19, Vite 7), Tailwind v4, Leaflet + OpenStreetMap tiles.
+- Server functions in `src/lib/*.functions.ts`; FortyGuard orchestration in
+  `src/lib/fortyguard/*.server.ts` (client, activity polling, cache, typed errors).
+- Risk engine `src/lib/risk.ts` with unit tests in `src/lib/risk.test.ts`.
+- No database — live fetches with in-memory caching.
 
-A grid or hex overlay on a simple map (Leaflet.js + OpenStreetMap tiles is free, no API key, beginner-friendly) showing FortyGuard temperature data as colored tiles — cool (blue/teal) to dangerous (deep red).
-
-A time slider (uses FortyGuard's forecast data, e.g. next 12 hours) so the map animates how heat risk shifts through the day — this is a strong demo moment, don't skip it.
-
-An AI recommendation panel: given (a) the user's stated activity — walk / cycle / commute / outdoor work — and (b) the current heatmap + forecast, call an LLM (Claude via the Anthropic API) with the structured temperature data and get back:
-
-A plain-language risk summary for right now
-
-The safer time window today (e.g. "before 9am or after 6pm")
-
-Which visible zones on the map to avoid and why (cite the actual temperature delta, not a vague warning)
-
-A "why is this hot?" explainer on tap/click of a tile, using FortyGuard's contextual layers (surface type, shade, vegetation) if the point-report endpoint is available — this is what makes it feel like real intelligence instead of a paint-by-numbers heatmap.
-
-Explicitly cut for time: user accounts, route-optimization pathfinding (approximate this with "avoid the red zones between X and Y" text instead of real routing), multi-city support, notifications/alerts, mobile app packaging.
-
-Architecture
-
-Frontend: single-page app. Plain HTML/CSS/JS with Leaflet.js is fastest for a beginner; React only if you're already comfortable with it.
-
-Backend: a thin serverless function (or a small Node/Express or Python/Flask server) that (a) calls the FortyGuard API server-side so the API key never sits in client JS, and (b) calls the Anthropic API for the recommendation text. Keep it to 2–3 endpoints: /heatmap, /point-report, /recommend.
-
-AI layer prompt shape: send the LLM structured JSON (grid of temps + coordinates + surface context + user's stated activity + time of day), and explicitly instruct it to return strict JSON (risk_level, summary, safer_window, zones_to_avoid) so the frontend can render it directly without parsing free text.
-
-No database needed — everything is fetched live or cached in memory for the demo.
-
-4-day plan
-
-Day 1: Get one real FortyGuard API call working end-to-end (or the mocked fixture if key isn't ready) and render raw tiles on a Leaflet map. No AI yet. Goal: see real/realistic data on a real map.
-
-Day 2: Add the time slider and forecast data. Add the point-detail click-through with contextual layers.
-
-Day 3: Wire up the Anthropic API call for the recommendation panel; design the strict JSON prompt/response contract; render it in the UI.
-
-Day 4: Polish the UI pass (visual design, empty/loading states), record the demo video, write the submission writeup (problem → data → AI reasoning → impact), buffer for API flakiness.
-
-Deliverables to produce
-
-Working deployed demo (or a very smooth localhost recording if deploy time runs out)
-
-Short demo video per FortyGuard's submission requirements
-
-Submission writeup: problem statement, how FortyGuard's Temperature API is used (be specific about which endpoints/fields), how AI adds reasoning beyond raw data, and one concrete real-world impact example (e.g. outdoor worker safety, elderly commuters)
-
-Now build
-
-Start with Day 1: scaffold the project, set up the Leaflet map centered on [insert city], and write the getHeatmapData() function against the FortyGuard /v1/heatmap endpoint (or the mock fixture, clearly labeled MOCK — replace with real API in a comment). Show me the map rendering before moving to the AI layer.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/48c63d9f-b211-4722-b191-5250a33adf51).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## Local development
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
 npm i
 npm run dev
 ```
+
+Requires `FORTYGUARD_API_KEY` (and optionally `FORTYGUARD_BASE_URL`) in the server environment. The
+key is never exposed to the browser. Without a key the app serves clearly-labelled demo data.
+
+## Documentation
+
+- `docs/brand.md` — frozen brand specification
+- `docs/product.md` — product scope
+- `docs/methodology.md` — model detail
+- `docs/demo.md` — judging run-through
+
+## Disclaimer
+
+HeatSafe is an experimental decision-support product. HeatSafe Risk is not a medical diagnosis,
+emergency warning, or engineering certification. Recommendations should not replace official
+public-safety guidance or professional judgment.
