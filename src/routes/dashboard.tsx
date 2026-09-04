@@ -26,8 +26,12 @@ export const Route = createFileRoute("/dashboard")({
         content: "See which blocks are dangerously hot right now, and when it's safe to go outside.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://micro-heat-alert.lovable.app/dashboard" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:image", content: "https://micro-heat-alert.lovable.app/og-image.jpg" },
+      { name: "twitter:image", content: "https://micro-heat-alert.lovable.app/og-image.jpg" },
     ],
+    links: [{ rel: "canonical", href: "https://micro-heat-alert.lovable.app/dashboard" }],
   }),
   // Instant mock render; the live FortyGuard feed is fetched client-side
   // because its polling flow can exceed the loader request budget.

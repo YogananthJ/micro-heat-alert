@@ -15,8 +15,12 @@ export const Route = createFileRoute("/")({
         content: "See the heat. Predict the risk. Make better decisions.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://micro-heat-alert.lovable.app/" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:image", content: "https://micro-heat-alert.lovable.app/og-image.jpg" },
+      { name: "twitter:image", content: "https://micro-heat-alert.lovable.app/og-image.jpg" },
     ],
+    links: [{ rel: "canonical", href: "https://micro-heat-alert.lovable.app/" }],
   }),
   component: Landing,
 });
