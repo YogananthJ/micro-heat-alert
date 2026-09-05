@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as PlannerRouteImport } from './routes/planner'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RoutesRouteImport } from './routes/routes'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const PlannerRoute = PlannerRouteImport.update({
   path: '/planner',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoutesRoute = RoutesRouteImport.update({
   id: '/routes',
   path: '/routes',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/how-it-works': typeof HowItWorksRoute
   '/planner': typeof PlannerRoute
+  '/privacy': typeof PrivacyRoute
   '/routes': typeof RoutesRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/how-it-works': typeof HowItWorksRoute
   '/planner': typeof PlannerRoute
+  '/privacy': typeof PrivacyRoute
   '/routes': typeof RoutesRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,23 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/how-it-works': typeof HowItWorksRoute
   '/planner': typeof PlannerRoute
+  '/privacy': typeof PrivacyRoute
   '/routes': typeof RoutesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/how-it-works' | '/planner' | '/routes'
+  fullPaths:
+    '/' | '/dashboard' | '/how-it-works' | '/planner' | '/privacy' | '/routes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/how-it-works' | '/planner' | '/routes'
-  id: '__root__' | '/' | '/dashboard' | '/how-it-works' | '/planner' | '/routes'
+  to: '/' | '/dashboard' | '/how-it-works' | '/planner' | '/privacy' | '/routes'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/how-it-works'
+    | '/planner'
+    | '/privacy'
+    | '/routes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,6 +93,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   HowItWorksRoute: typeof HowItWorksRoute
   PlannerRoute: typeof PlannerRoute
+  PrivacyRoute: typeof PrivacyRoute
   RoutesRoute: typeof RoutesRoute
 }
 
@@ -109,6 +127,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlannerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/routes': {
       id: '/routes'
       path: '/routes'
@@ -124,6 +149,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   HowItWorksRoute: HowItWorksRoute,
   PlannerRoute: PlannerRoute,
+  PrivacyRoute: PrivacyRoute,
   RoutesRoute: RoutesRoute,
 }
 export const routeTree = rootRouteImport
